@@ -1,0 +1,144 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+```{r start, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+rm(list = ls())
+tinytex::install_tinytex()
+```
+
+
+```{r setup, include= TRUE}
+## install packages if necessary
+
+#install.packages("ggplot2")
+#install.packages("tidyverse")
+#install.packages("readxl")
+#install.packages("zoo")
+#install.packages ("mFilter")
+#install.packages("gridExtra")
+#install.packages("kableExtra")
+
+## import packages 
+library(tidyverse)
+library(readxl)
+library(zoo)
+library(mFilter)
+library(gridExtra)
+library(kableExtra)
+```
+
+```{r import data, include=TRUE}
+## import data
+path      <- "International_Financial_Statistics.xlsx"
+data_ori  <- readxl::read_excel(path, skip = 1)
+
+colnames_ori       <- colnames(data_ori) # save original col names
+
+colnames(data_ori) <- c("YQ", "Government Expenditure", "GDP", "Investment", "HH Consumption", "Private Consumption")
+
+```
+
+```{r data clearning, include=TRUE}
+## setting data as time series & Natural log transformation
+data <- data_ori %>% 
+        mutate(YQ =as.Date(ts(YQ, start = as.yearqtr('1994-1'), frequency = 4))) %>% # time series
+        mutate_if(is.numeric, log) %>% # log transformation
+        select(YQ, GDP, 'Private Consumption', Investment, 'Government Expenditure')
+```
+
+
+a) First consider the data pre Covid (i.e until 2019). Compute the Hodrick Prescott trends
+and distinguish cyclical from trend behavior for output, consumption, investment and
+government expenditures. After applying the HP Filter, plot the trend and the cyclical
+component as two separate series for each of the variables in question. Hint: if you
+don’t know how to do this, use the R code below. Can can provide you with more
+details. Just ask!
+
+```{r func, include=TRUE}
+func_abc <- function(data, name){
+            sd_corr_table <- array(data = NA, dim = c(4,2),
+                              dimnames = list(colnames(data)[2:5],
+                                              c("Standard Deviation (%)", "Correlation with GDP (%)")))
+            
+            GDP_cy <- hpfilter(data$GDP, freq = 1600, type =("lambda"), drift = FALSE)[["cycle"]]
+            
+            for (i in 2:ncol(data)){
+              hp <- hpfilter(data[,i], freq = 1600, type =("lambda"), drift = FALSE)
+              
+              data_plot <- data.frame(YQ    = data$YQ,
+                                      trend = hp[["trend"]],
+                                      cycle = hp[["cycle"]])
+              
+              colnames(data_plot) <- c("YQ", "trend", "cycle")
+              
+              p1 <- ggplot(data = data_plot, aes(x = YQ, y = trend))+
+                    geom_line()+
+                    labs(x = "Year",
+                         y = "HP Filter (log)",
+                         title = paste("Japan:", colnames(data)[i], "Trend"))
+              
+              p2 <- ggplot(data = data_plot, aes(x = YQ, cycle))+
+                    geom_line(color = "red")+
+                    geom_hline(yintercept = 0)+
+                    labs(x = "Year",
+                         y = "Deviation from trend (log)",
+                         title = paste("Japan:", colnames(data)[i], "Cycle"))
+              
+              p_agg <- grid.arrange(p1, p2, nrow = 2)
+              ggsave(paste("chart_",name, "_", colnames(data)[i], ".jpeg", sep = ''), p_agg)
+              
+              sd_corr_table[i-1, 1] <- round(sd(data_plot$cycle)*100,2)
+              sd_corr_table[i-1, 2] <- round(cor(GDP_cy,data_plot$cycle),2)
+            }
+            return(sd_corr_table)
+}
+
+```
+
+```{r a_1, include=TRUE}
+data_a  <- data %>% 
+           filter(YQ < "2020-01-01")
+
+sd_corr_table <- func_abc(data = data_a, name = "a")
+```
+
+```{r a_2, include=TRUE}
+sd_corr_table %>% 
+  kbl(caption = "Standard Deviation of Cycle and Correlation with GDP;1994-2019") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+b) Compute and report the standard deviation of the cyclical components of each of these
+variables. How do they compare with the numbers in the Prescott-Kydland economy
+(Lecture 21)?
+
+As Table 1 shows, the standard deviation of GDP is 1.42%, which is close to the original paper. The standard deviation of consumpion is smaller than that of GDP, and that of investment is larger than that of GDP. They are also similar to the original paper. As for the government expenditure, which was not in the original paper, it is much smaller than the standard deviation of GDP. This can be rationalized by the fact that the budget is not automatically respond to a shock expect the part of built-in-stabilizer.
+
+
+c) Now report the correlations of the cyclical variables. How do they compare with the
+numbers in the Prescott-Kydland economy?
+
+As reported in Table 1, both consumption and investment showed positive high correlation with GDP. This is the similar to the original paper. As for the government expenditure, the correlation with GDP is positive and small. As I mentioned in the (b), the budget is not automatically respond to the change in GDP because it ould take time to determine the budget. If the share of built-in-stabilizer is large in the budget, it could be negative correlation.
+
+d)Now look at the 2019-2021 period (better if you can make it to the first quarter of 2022,
+but some countries may not have yet this data). What happened to output, consumption, investment and savings? Do these make sense from the RBC perspective?
+
+
+```{r d_1, include=TRUE}
+## should it be only from 2019-2022? It can be too short to take the trend.
+sd_corr_table_2022 <- func_abc(data = data, name = "d")
+```
+
+
+
+```{r d_2, include=TRUE}
+sd_corr_table %>% 
+  kbl(caption = "Standard Deviation of Cycle and Correlation with GDP;1994-2022") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+```
+
