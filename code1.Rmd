@@ -5,7 +5,7 @@ output:
   word_document: default
 ---
 ```{r start, include=FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.pos = '!h')
 rm(list = ls())
 tinytex::install_tinytex()
 ```
@@ -122,23 +122,37 @@ As Table 1 shows, the standard deviation of GDP is 1.42%, which is close to the 
 c) Now report the correlations of the cyclical variables. How do they compare with the
 numbers in the Prescott-Kydland economy?
 
-As reported in Table 1, both consumption and investment showed positive high correlation with GDP. This is the similar to the original paper. As for the government expenditure, the correlation with GDP is positive and small. As I mentioned in the (b), the budget is not automatically respond to the change in GDP because it ould take time to determine the budget. If the share of built-in-stabilizer is large in the budget, it could be negative correlation.
+As reported in Table 1, both consumption and investment showed positive high correlation with GDP. This is the similar to the original paper. As for the government expenditure, the correlation with GDP is positive and small. As I mentioned in the (b), the budget is not automatically respond to the change in GDP because it should take time to determine the budget. If the share of built-in-stabilizer is large in the budget, it could be negative correlation.
 
 d)Now look at the 2019-2021 period (better if you can make it to the first quarter of 2022,
 but some countries may not have yet this data). What happened to output, consumption, investment and savings? Do these make sense from the RBC perspective?
 
 
 ```{r d_1, include=TRUE}
-## should it be only from 2019-2022? It can be too short to take the trend.
-sd_corr_table_2022 <- func_abc(data = data, name = "d")
+data_d <- data %>% 
+          mutate_if(is.numeric, exp) %>%
+          filter(YQ >= "2019-1-1") %>% 
+          mutate(GDP = GDP/GDP[1]*100,
+                 `Private Consumption` = `Private Consumption`/ `Private Consumption`[1]*100,
+                 Investment = Investment/Investment[1]*100,
+                 `Government Expenditure` = `Government Expenditure`/`Government Expenditure`[1]*100) %>% 
+         gather(key = 'Variable', value = 'Value', -YQ)
+
+ggplot(data = data_d, aes( x = YQ, y = Value, color = Variable))+
+  geom_line() +
+  geom_hline(yintercept = 100)+
+  labs(y = "index (2019/1Q = 100",
+       x = "Years",
+       title = "Japan: Macro Variables in response to COVID-19")
+ggsave("chart_d.jpeg")
 ```
 
+The response to COVID fits well the supply shock paradigm. The chart shows that the negative productivity shock due to COVID leads to a postponement of consumption and investment. Consequently, it reduced GDP significantly. After the worst period (2nd quarter of 2020), the level of consumption and investment remain low. From the perspective of RBC, both should recover quickly as they postponed consumption and investment for the next period. This suggests, the negative productivity still pushing down Japanese economy.
 
+e) In some countries consumption is as volatile or more volatile than output. What type of shocks could generate this pattern?
 
-```{r d_2, include=TRUE}
-sd_corr_table %>% 
-  kbl(caption = "Standard Deviation of Cycle and Correlation with GDP;1994-2022") %>%
-  kable_classic(full_width = F, html_font = "Cambria")
+According to the Eichenbaum et al., if people attached a risk of contagion to the act of consuming, the consumption could be reduced more than it would have been with only the change in inter temporal wealth.
 
-```
+f) Has this exercise changed the way you think about the need to smooth business cycles in your economy? Should policy be managing aggregate demand?
 
+No, I still believe Keynesian approach is important. As Becker suggested the long-term unemployment would cause hysteresis effect, which would reduce the productivity in the long run. Therefore, stable and minimum business cycle should be desired. Without policy intervention, it would lower the potential GDP.
