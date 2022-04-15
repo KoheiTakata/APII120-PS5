@@ -110,6 +110,8 @@ sd_corr_table <- func_abc(data = data_a, name = "a")
 sd_corr_table %>% 
   kbl(caption = "Standard Deviation of Cycle and Correlation with GDP;1994-2019") %>%
   kable_classic(full_width = F, html_font = "Cambria")
+
+colnames_ori
 ```
 
 b) Compute and report the standard deviation of the cyclical components of each of these
@@ -138,6 +140,7 @@ data_d <- data %>%
                  `Government Expenditure` = `Government Expenditure`/`Government Expenditure`[1]*100) %>% 
          gather(key = 'Variable', value = 'Value', -YQ)
 
+str(data_d)
 ggplot(data = data_d, aes( x = YQ, y = Value, color = Variable))+
   geom_line() +
   geom_hline(yintercept = 100)+
@@ -156,3 +159,23 @@ According to the Eichenbaum et al., if people attached a risk of contagion to th
 f) Has this exercise changed the way you think about the need to smooth business cycles in your economy? Should policy be managing aggregate demand?
 
 No, I still believe Keynesian approach is important. As Becker suggested the long-term unemployment would cause hysteresis effect, which would reduce the productivity in the long run. Therefore, stable and minimum business cycle should be desired. Without policy intervention, it would lower the potential GDP.
+
+
+```{r ex3, include = TRUE}
+## setting parameters
+alpha = 0.25
+A     = 3279
+r     = 0.379
+k     = 26885
+D     = 0.5
+#r = A*alpha* k^(alpha-1) 
+
+saving <- function(D, alpha){
+  w = (1-alpha)*A*k^alpha
+  s = (1- (2 + r/ 1 + r)*D)*(w/2)
+}
+
+
+
+```
+
